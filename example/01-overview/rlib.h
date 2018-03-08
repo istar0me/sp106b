@@ -6,4 +6,4 @@
 int randInt(int n);
 int randChar(char *set);
 char *randSelect(char* array[], int size);
-void timeSeed()
+void timeSeed();
