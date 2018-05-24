@@ -81,7 +81,7 @@ var symTable = {
   "SCREEN":16384
 };
 
-var symTop = 16;
+var symTop = 16; // 由於 0~15 為保留位置，因此從 16 開始
 
 function addSymbol(symbol) {
   symTable[symbol] = symTop;
@@ -93,21 +93,21 @@ assemble(file+'.asm', file+'.hack');
 function assemble(asmFile, objFile) {
   var asmText = fs.readFileSync(asmFile, "utf8"); // 讀取檔案到 text 字串中
   var lines   = asmText.split(/\r?\n/); // 將組合語言分割成一行一行
-  c.log(JSON.stringify(lines, null, 2));
+  c.log(JSON.stringify(lines, null, 2)); // 轉換成 JSON 格式
   pass1(lines);
   pass2(lines, objFile);
 } 
 
-function parse(line, i) {
-  line.match(/^([^\/]*)(\/.*)?$/);
-  line = RegExp.$1.trim();
-  if (line.length===0)
+function parse(line, i) { // 語法分析（如 @2 -> { type: 'A', arg: '2' }）
+  line.match(/^([^\/]*)(\/.*)?$/); // 先比對非註解，再比對註解（也可沒註解），並將結果儲存至名為 RegExp 的全域變數
+  line = RegExp.$1.trim(); // 消除左右的空白
+  if (line.length===0) // 消除空白後，若長度為0，代表為空行
     return null;
   if (line.startsWith("@")) {
-    return { type:"A", arg:line.substring(1).trim() }
-  } else if (line.match(/^\(([^\)]+)\)$/)) {
+    return { type:"A", arg:line.substring(1).trim() } // 由於第 0 個為 @ 符號，因此用 substring(1) 取出後面的內容
+  } else if (line.match(/^\((\w+)\)$/)) { // 比對符號（如 (label) ）
     return { type:"S", symbol:RegExp.$1 }
-  } else if (line.match(/^((([AMD]*)=)?([AMD01\+\-\&\|\!]*))(;(\w*))?$/)) {
+  } else if (line.match(/^((([AMD]*)=)?([AMD01\+\-\&\|\!]*))(;(\w*))?$/)) { // 比對 C 指令（如 D=M+1, M+1;JGT）
     return { type:"C", c:RegExp.$4, d:RegExp.$3, j:RegExp.$6 }
   } else {
     throw "Error: line "+(i+1);
@@ -120,7 +120,7 @@ function pass1(lines) {
   for (var i=0; i<lines.length; i++) {
     var p = parse(lines[i], i);
     if (p===null) continue;
-    if (p.type === "S") {
+    if (p.type === "S") { // S = Symbol
       c.log(" symbol: %s %s", p.symbol, intToStr(address, 4, 10));
       symTable[p.symbol] = address;
       continue;
@@ -141,7 +141,7 @@ function pass2(lines, objFile) {
       var p = parse(lines[i], i);
       if (p===null || p.type === "S") continue;
       var code = toCode(p);
-      c.log("%s:%s %s", intToStr(i+1, 3, 10), intToStr(code, 16, 2),  lines[i]);
+      c.log("%s:%s %s", intToStr(i+1, 3, 10), intToStr(code, 16, 2),  lines[i]); // 008:0000000000000010 @2
       ws.write(intToStr(code, 16, 2)+"\n");
       address++;
     }
@@ -159,10 +159,10 @@ function intToStr(num, size, radix) {
 function toCode(p) {
   var address; 
   if (p.type === "A") {
-    if (p.arg.match(/^\d+$/)) {
-      address = parseInt(p.arg);
-    } else {
-      address = symTable[p.arg]; 
+    if (p.arg.match(/^\d+$/)) { // d:digit(數字)，如 @100
+      address = parseInt(p.arg); // 將字串轉換成數字(如 "100" 轉換成 100)
+    } else { // 如 @label, @variable
+      address = symTable[p.arg]; // 取出它的地址
       if (typeof address === 'undefined') {
         address = symTop;
         addSymbol(p.arg, address);        
@@ -173,6 +173,9 @@ function toCode(p) {
     var d = dtable[p.d];
     var cx = ctable[p.c];
     var j = jtable[p.j];
+    console.log(`${(0b111<<13).toString(2)} // 0b111<<13
+${(cx<<6).toString(2)} // cx<<6
+${(d<<3).toString(2)} // d<<3`)
     return 0b111<<13|cx<<6|d<<3|j;
   }
 }
