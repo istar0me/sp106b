@@ -159,13 +159,21 @@ function intToStr(num, size, radix) {
 function toCode(p) {
   var address; 
   if (p.type === "A") {
+<<<<<<< HEAD
     if (p.arg.match(/^\d+$/)) { // d:digit(數字)，如 @100
       address = parseInt(p.arg); // 將字串轉換成數字(如 "100" 轉換成 100)
     } else { // 如 @label, @variable
       address = symTable[p.arg]; // 取出它的地址
+=======
+    if (p.arg.match(/^\d+$/)) {
+      address = parseInt(p.arg);
+    } else {
+      address = symTable[p.arg];
+>>>>>>> c35dc521d025410396e3c51db282d19a80451653
       if (typeof address === 'undefined') {
         address = symTop;
-        addSymbol(p.arg, address);        
+        addSymbol(p.arg, address);
+        // throw new Error(p.arg + '===undefined')
       }
     }
     return address; 
