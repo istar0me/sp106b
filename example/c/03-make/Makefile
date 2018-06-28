@@ -1,6 +1,7 @@
 CC := gcc
-CFLAGS = -O0
+CFLAGS = -std=c99 -O0
 TARGET = run.o
+
 all: $(TARGET)
 
 $(TARGET): sum.c main.c

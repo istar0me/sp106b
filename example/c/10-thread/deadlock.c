@@ -1,97 +1,58 @@
-/**
- * A pthread program illustrating deadlock.
- *
- * Usage:
- *	    gcc deadlock.c -lpthread
- *	    ./a.out
- *
- * Figure 7.4
- *
- * @author Gagne, Galvin, Silberschatz
- * Operating System Concepts  - Ninth Edition
- * Copyright John Wiley & Sons - 2013.
- */
-
 #include <pthread.h>
 #include <stdio.h>
 #include <unistd.h>
 
-pthread_mutex_t first_mutex;
-pthread_mutex_t second_mutex;
+// 加入 mutex
+pthread_mutex_t x;
+pthread_mutex_t y;
 
-void *do_work_one(void *param); 
-void *do_work_two(void *param); 
+void *A(); 
+void *B(); 
 
 int main(int argc, char *argv[])
 {
-    pthread_t tid1, tid2; /* the thread identifiers */
-    pthread_attr_t attr; /* set of attributes for the thread */
+    pthread_t threadA, threadB; // 宣告 pthread 變數 threadA 與 threadB
+    pthread_attr_t attr; // 定義 pthread 的屬性
 
-    /* get the default attributes */
-    pthread_attr_init(&attr);
+    pthread_attr_init(&attr); // 初始化 pthread 的屬性
+    pthread_mutex_init(&x, NULL); // 初始化 mutex x
+    pthread_mutex_init(&y, NULL); // 初始化 mutex y
 
-    /* create the mutex locks */
-    pthread_mutex_init(&first_mutex,NULL);
-    pthread_mutex_init(&second_mutex,NULL);
+    pthread_create(&threadA, NULL, A, NULL); // 新增一個名為執行函數 A 的執行緒 threadA，不帶參數與屬性
+    pthread_create(&threadB, NULL, B, NULL); // 新增一個名為執行函數 B 的執行緒 threadB，不帶參數與屬性
 
-    /* create the threads */
-    pthread_create(&tid1,&attr,do_work_one,NULL);
-    pthread_create(&tid2,&attr,do_work_two,NULL);
+    pthread_join(threadA, NULL); // 暫停當前的 threadA，直到另外一個執行緒結束
+    pthread_join(threadB, NULL); // 暫停當前的 threadB，直到另外一個執行緒結束
 
-    /* now wait for the thread to exit */
-    pthread_join(tid1,NULL);
-    pthread_join(tid2,NULL);
-
-    printf("Parent DONE\n");
-
-    /* destroy the mutex before exiting */
-    pthread_mutex_destroy(&first_mutex);
-    pthread_mutex_destroy(&second_mutex);
+    pthread_mutex_destroy(&x); // 移除 mutex x
+    pthread_mutex_destroy(&y); // 移除 mutex y
 }
 
-/**
- * The first thread worker
- */
-void *do_work_one(void *param) 
+void *A() 
 {
-	pthread_mutex_lock(&first_mutex);
-    printf("Worker 1 has acquired first mutex\n");
-	pthread_mutex_lock(&second_mutex);
-    printf("Worker 1 has acquired second mutex\n");
+    pthread_mutex_lock(&x); // 上鎖 mutex x
+    printf("A lock x\n");
+    sleep(1); // 暫停一秒，讓 OS 不耐煩，而去執行其他 thread(?)
+    pthread_mutex_lock(&y);
+    printf("A lock y\n");
+    pthread_mutex_unlock(&y); 
+    pthread_mutex_unlock(&x); 
 
-	/**
-	 * Do some work
-	 */
+    printf("finished A\n");
 
-    printf("Worker 1 is whistling .....\n");
-
-	pthread_mutex_unlock(&second_mutex); 
-	pthread_mutex_unlock(&first_mutex); 
-
-    printf("worker 1 done\n");
-
-	pthread_exit(0);
+    pthread_exit(0);
 }
 
-/**
- * The second thread worker
- */
-void *do_work_two(void *param)
+void *B()
 {
-        pthread_mutex_lock(&second_mutex);
-        printf("Worker 2 has acquired second mutex\n");
-        pthread_mutex_lock(&first_mutex);
-        printf("Worker 2 has acquired first mutex\n");
+    
+    pthread_mutex_lock(&y);
+    printf("B lock y\n");
+    sleep(1);
+    pthread_mutex_lock(&x);
+    printf("B lock x\n");
+    pthread_mutex_unlock(&x);
+    pthread_mutex_unlock(&y);
 
-        /**
-         * Do some work
-         *
-         */
-
-        printf("Worker 2 is whistling .....\n");
-
-        pthread_mutex_unlock(&first_mutex);
-        pthread_mutex_unlock(&second_mutex);
-
-        pthread_exit(0);
+    pthread_exit(0);
 }
